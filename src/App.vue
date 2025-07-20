@@ -1,0 +1,54 @@
+<template>
+  <div id="app-container" class="flex flex-col h-dvh max-w-4xl mx-auto bg-gray-50 shadow-lg">
+    <AppHeader 
+      :current-mode="state.mode" 
+      :image-loaded="!!state.imageSrc"
+      @set-mode="setMode" 
+      @image-selected="onImageSelected" 
+    />
+
+    <main class="flex-grow overflow-hidden">
+      <MainViewer 
+        :image-src="state.imageSrc" 
+        :mode="state.mode"
+        :level-center="state.levelCenter"
+        :level-range="state.levelRange"
+        :edge-color-mode="state.edgeColorMode"
+      />
+    </main>
+
+    <AppFooter 
+      :mode="state.mode" 
+      :level-center="state.levelCenter"
+      :level-range="state.levelRange"
+      :edge-color-mode="state.edgeColorMode"
+      @update:level-center="state.levelCenter = $event"
+      @update:level-range="state.levelRange = $event"
+      @update:edge-color-mode="state.edgeColorMode = $event"
+    />
+  </div>
+</template>
+
+<script setup>
+import { reactive } from 'vue';
+import AppHeader from './components/AppHeader.vue';
+import MainViewer from './components/MainViewer.vue';
+import AppFooter from './components/AppFooter.vue';
+
+const state = reactive({
+  mode: 'original', // 'original', 'contrast', 'edge'
+  imageSrc: null,
+  levelCenter: 128,
+  levelRange: 3,
+  edgeColorMode: 'color', // 'mono' or 'color'
+});
+
+function setMode(newMode) {
+  state.mode = newMode;
+}
+
+function onImageSelected(newImageSrc) {
+  state.imageSrc = newImageSrc;
+  state.mode = 'original'; // Reset to original view when new image is loaded
+}
+</script>

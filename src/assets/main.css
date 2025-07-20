@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+
+/* Custom Slider Styles */
+.slider-container {
+  @apply w-full;
+}
+
+.custom-slider {
+  -webkit-appearance: none;
+  @apply w-full h-2 bg-gray-300 rounded-lg cursor-pointer mt-1;
+}
+
+/* Ticks for the range slider */
+.level-range-slider {
+    --num-ticks: 6; /* 7 values (2-8) means 6 intervals */
+    background-image: repeating-linear-gradient(
+      to right,
+      #9ca3af, /* gray-400 */
+      #9ca3af 2px,
+      transparent 2px,
+      transparent calc(100% / var(--num-ticks))
+    );
+    /* Offset to center the ticks correctly */
+    background-position-x: calc( (100% / var(--num-ticks) - 2px) / 2 );
+}
+
+
+/* --- Thumb Styles --- */
+.custom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  @apply h-7 w-7 bg-blue-500 rounded-full cursor-pointer relative;
+  margin-top: 0px; /* (thumb height - track height) / -2 */
+}
+
+.custom-slider::-moz-range-thumb {
+  @apply h-5 w-5 bg-blue-500 rounded-full cursor-pointer border-none;
+}
+
+/* --- Floating Value (Output) Style --- */
+.slider-output {
+  @apply absolute text-white text-[10px] font-bold top-[-3px] pointer-events-none;
+  /* Center the text over the thumb */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 0px; /* Same as thumb width */
+  height: 30px; /* Same as thumb height */
+  z-index: 1;
+}
+
+@tailwind utilities;
