@@ -1,0 +1,5 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M28.5 49C39.8244 49 49 39.8244 49 28.5C49 17.1756 39.8244 8 28.5 8C17.1756 8 8 17.1756 8 28.5C8 39.8244 17.1756 49 28.5 49Z" stroke="#4F46E5" stroke-width="6"/>
+  <line x1="45.5" y1="45.5" x2="56.5" y2="56.5" stroke="#4F46E5" stroke-width="6" stroke-linecap="round"/>
+  <text x="15" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#4F46E5">AI?</text>
+</svg>
