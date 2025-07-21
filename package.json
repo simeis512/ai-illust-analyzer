@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
+    "deploy": "npm run build && gh-pages -d dist",
     "lint": "eslint . --fix",
     "tailwind-init": "tailwindcss init -p"
   },
@@ -21,6 +22,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9.29.0",
     "eslint-plugin-vue": "~10.2.0",
+    "gh-pages": "^6.3.0",
     "globals": "^16.2.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
