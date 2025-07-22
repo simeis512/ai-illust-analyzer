@@ -53,7 +53,7 @@ function drawDisclaimer() {
   let fontSize = Math.floor(canvas.height / 4); // Start with a large font size
   let textWidth, textHeight, boxWidth, boxHeight;
   const angle = Math.atan2(canvas.height, canvas.width);
-  const safetyMargin = 0.95; // Use 95% of canvas size
+  const safetyMargin = 0.98; // Use 98% of canvas size
 
   while (fontSize > 10) { // Minimum font size of 10
     const lineHeight = fontSize * 1.6;
@@ -84,14 +84,19 @@ function drawDisclaimer() {
   ctx.rotate(-angle);
 
   // --- Common Text Style ---
-  ctx.globalAlpha = 0.65;
+  ctx.globalAlpha = 0.75;
   ctx.font = `bold ${fontSize}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   const lineHeight = fontSize * 1.6;
-  const totalTextHeight = lines.length * lineHeight;
-  let currentY = -totalTextHeight / 2 + lineHeight / 2;
+  const titleLine = lines[0];
+  const mainLines = lines.slice(1);
+  const mainTextHeight = mainLines.length * lineHeight;
+  
+  // Center the main block of text, then place title above it
+  const mainBlockStartY = -mainTextHeight / 2 + lineHeight / 2;
+  const titleY = mainBlockStartY - lineHeight;
 
   // --- 1. Draw Shadowed Outline ---
   ctx.shadowColor = 'black';
@@ -102,7 +107,11 @@ function drawDisclaimer() {
   ctx.lineWidth = fontSize / 4;
   ctx.lineJoin = 'round';
 
-  for (const line of lines) {
+  // Draw title
+  ctx.strokeText(titleLine, 0, titleY);
+  // Draw main lines
+  let currentY = mainBlockStartY;
+  for (const line of mainLines) {
     ctx.strokeText(line, 0, currentY);
     currentY += lineHeight;
   }
@@ -111,8 +120,11 @@ function drawDisclaimer() {
   ctx.shadowColor = 'transparent';
   ctx.fillStyle = 'white';
 
-  currentY = -totalTextHeight / 2 + lineHeight / 2;
-  for (const line of lines) {
+  // Draw title
+  ctx.fillText(titleLine, 0, titleY);
+  // Draw main lines
+  currentY = mainBlockStartY;
+  for (const line of mainLines) {
     ctx.fillText(line, 0, currentY);
     currentY += lineHeight;
   }
