@@ -1,5 +1,7 @@
 <template>
   <div id="app-container" class="flex flex-col h-dvh max-w-4xl mx-auto bg-gray-50 shadow-lg">
+    <ModalNotice v-if="showModal" @close="showModal = false" />
+
     <AppHeader 
       :current-mode="state.mode" 
       :image-loaded="!!state.imageSrc"
@@ -30,10 +32,13 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import AppHeader from './components/AppHeader.vue';
 import MainViewer from './components/MainViewer.vue';
 import AppFooter from './components/AppFooter.vue';
+import ModalNotice from './components/ModalNotice.vue';
+
+const showModal = ref(true);
 
 const state = reactive({
   mode: 'original', // 'original', 'contrast', 'edge'

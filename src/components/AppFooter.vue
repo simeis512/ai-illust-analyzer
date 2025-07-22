@@ -57,7 +57,7 @@
         </button>
       </div>
     </div>
-    <div class="text-xs text-gray-500 text-right px-4 pb-1">
+    <div class="text-xs text-gray-500 text-right px-1 pb-1">
       すべての処理はブラウザ内で完結し、画像が外部に送信されることはありません。
     </div>
   </footer>
