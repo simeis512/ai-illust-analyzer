@@ -20,6 +20,7 @@ const props = defineProps({
   levelCenter: Number,
   levelRange: Number,
   edgeColorMode: String,
+  edgeColorChannels: Object,
 });
 
 const panzoomContainer = ref(null);
@@ -249,23 +250,31 @@ function applyColorEdgeDetection() {
   cv.split(originalImage, rgbaPlanes);
 
   let mergedPlanes = new cv.MatVector();
+  const channelOrder = ['r', 'g', 'b'];
 
   for (let i = 0; i < 3; i++) {
+    const channelKey = channelOrder[i];
     let singleChannel = rgbaPlanes.get(i);
-    let dst = new cv.Mat();
-    cv.Laplacian(singleChannel, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
-    let absDst = new cv.Mat();
-    cv.convertScaleAbs(dst, absDst);
-    let binaryDst = new cv.Mat();
-    cv.threshold(absDst, binaryDst, 0, 255, cv.THRESH_BINARY);
-    mergedPlanes.push_back(binaryDst);
 
+    if (props.edgeColorChannels[channelKey]) {
+      let dst = new cv.Mat();
+      cv.Laplacian(singleChannel, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
+      let absDst = new cv.Mat();
+      cv.convertScaleAbs(dst, absDst);
+      let binaryDst = new cv.Mat();
+      cv.threshold(absDst, binaryDst, 0, 255, cv.THRESH_BINARY);
+      mergedPlanes.push_back(binaryDst);
+      dst.delete();
+      absDst.delete();
+    } else {
+      // If channel is disabled, add a black channel of the same size
+      let blackChannel = cv.Mat.zeros(originalImage.rows, originalImage.cols, cv.CV_8U);
+      mergedPlanes.push_back(blackChannel);
+    }
     singleChannel.delete();
-    dst.delete();
-    absDst.delete();
-    binaryDst.delete();
   }
 
+  // Keep original alpha channel
   mergedPlanes.push_back(rgbaPlanes.get(3));
 
   const result = new cv.Mat();
@@ -280,10 +289,10 @@ function applyColorEdgeDetection() {
 
 // --- Watchers ---
 watch(() => props.imageSrc, loadImage);
-watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode], () => {
+watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels], () => {
     applyProcessing();
     requestAnimationFrame(drawDisclaimer);
-});
+}, { deep: true });
 
 
 // --- Lifecycle Hooks ---

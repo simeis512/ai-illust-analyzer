@@ -52,3 +52,59 @@
 }
 
 @tailwind utilities;
+
+/* --- Edge Detection Controls --- */
+.edge-controls-container {
+  @apply grid grid-cols-2 gap-4 w-full max-w-md;
+}
+
+.mode-button {
+    @apply px-4 py-2 text-sm font-medium rounded-md cursor-pointer;
+}
+
+.mode-button.active {
+    @apply bg-blue-500 text-white;
+}
+
+.mode-button:not(.active) {
+    @apply text-gray-700 bg-white hover:bg-gray-50;
+}
+
+.channel-toggles {
+  @apply flex items-center space-x-1 p-1 rounded-md;
+}
+
+.channel-toggles.disabled {
+    @apply opacity-50;
+}
+
+.channel-toggle {
+  @apply relative flex items-center justify-center w-7 h-7 rounded-full transition-all ease-in-out bg-gray-300 text-white font-bold;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.channel-toggles:not(.disabled) .channel-toggle {
+    @apply cursor-pointer;
+}
+
+.channel-toggles.disabled .channel-toggle {
+  @apply cursor-not-allowed bg-gray-200;
+}
+
+.channel-toggle.toggled-on.channel-r {
+  @apply bg-red-500;
+  box-shadow: 0 0 8px #ef4444;
+}
+.channel-toggle.toggled-on.channel-g {
+  @apply bg-green-500;
+  box-shadow: 0 0 8px #22c55e;
+}
+.channel-toggle.toggled-on.channel-b {
+  @apply bg-blue-500;
+  box-shadow: 0 0 8px #3b82f6;
+}
+
+.channel-letter {
+  @apply relative text-sm leading-none;
+  z-index: 1;
+}

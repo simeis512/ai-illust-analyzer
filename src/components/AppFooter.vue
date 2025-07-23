@@ -44,17 +44,34 @@
       </div>
 
       <!-- Edge Detection Controls -->
-      <div v-else-if="mode === 'edge'" class="flex items-center space-x-2">
-        <button 
-          @click="emit('update:edgeColorMode', 'color')" 
-          :class="['px-4 py-2 text-sm font-medium rounded-md', edgeColorMode === 'color' ? 'bg-blue-500 text-white' : 'text-gray-700 bg-white hover:bg-gray-50']">
-          カラー
-        </button>
-        <button 
-          @click="emit('update:edgeColorMode', 'mono')" 
-          :class="['px-4 py-2 text-sm font-medium rounded-md', edgeColorMode === 'mono' ? 'bg-blue-500 text-white' : 'text-gray-700 bg-white hover:bg-gray-50']">
-          モノクロ
-        </button>
+      <div v-else-if="mode === 'edge'" class="edge-controls-container">
+        <!-- Left side of the center divide -->
+        <div class="flex justify-end items-center space-x-2">
+          <div :class="['channel-toggles', { 'disabled': edgeColorMode === 'mono' }]">
+            <label v-for="(enabled, channel) in edgeColorChannels" :key="channel" 
+                  :class="['channel-toggle', `channel-${channel}`, { 'toggled-on': enabled }]">
+              <input type="checkbox" 
+                    :checked="enabled" 
+                    @change="toggleChannel(channel)"
+                    :disabled="edgeColorMode === 'mono'"
+                    class="hidden">
+              <span class="channel-letter">{{ channel.toUpperCase() }}</span>
+            </label>
+          </div>
+          <button 
+            @click="emit('update:edgeColorMode', 'color')" 
+            :class="['mode-button', { 'active': edgeColorMode === 'color' }]">
+            カラー
+          </button>
+        </div>
+        <!-- Right side of the center divide -->
+        <div class="flex justify-start items-center">
+          <button 
+            @click="emit('update:edgeColorMode', 'mono')" 
+            :class="['mode-button', { 'active': edgeColorMode === 'mono' }]">
+            モノクロ
+          </button>
+        </div>
       </div>
     </div>
     <div class="text-xs text-gray-500 text-right px-1 pb-1">
@@ -71,15 +88,20 @@ const props = defineProps({
   levelCenter: Number,
   levelRange: Number,
   edgeColorMode: String,
+  edgeColorChannels: Object,
 });
-const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode']);
+const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels']);
+
+function toggleChannel(channel) {
+  if (props.edgeColorMode === 'mono') return;
+  const newChannels = { ...props.edgeColorChannels, [channel]: !props.edgeColorChannels[channel] };
+  emit('update:edgeColorChannels', newChannels);
+}
 
 // Function to calculate the position of the output bubble
 const getOutputPosition = (value, min, max) => {
   const percent = (value - min) / (max - min);
-  // Calculate the position and apply an offset to center the bubble over the thumb
-  // The offset is based on the thumb's width (16px)
-  const thumbWidth = 28; // Corresponds to w-5 class
+  const thumbWidth = 28;
   const offset = (0.5 - percent) * thumbWidth;
   return {
     left: `calc(${percent * 100}% + ${offset}px)`,

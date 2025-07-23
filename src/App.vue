@@ -16,6 +16,7 @@
         :level-center="state.levelCenter"
         :level-range="state.levelRange"
         :edge-color-mode="state.edgeColorMode"
+        :edge-color-channels="state.edgeColorChannels"
       />
     </main>
 
@@ -24,9 +25,11 @@
       :level-center="state.levelCenter"
       :level-range="state.levelRange"
       :edge-color-mode="state.edgeColorMode"
+      :edge-color-channels="state.edgeColorChannels"
       @update:level-center="state.levelCenter = $event"
       @update:level-range="state.levelRange = $event"
       @update:edge-color-mode="state.edgeColorMode = $event"
+      @update:edge-color-channels="state.edgeColorChannels = $event"
     />
   </div>
 </template>
@@ -46,6 +49,7 @@ const state = reactive({
   levelCenter: 128,
   levelRange: 3,
   edgeColorMode: 'color', // 'mono' or 'color'
+  edgeColorChannels: { r: true, g: true, b: true },
 });
 
 function setMode(newMode) {
