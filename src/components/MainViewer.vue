@@ -21,6 +21,7 @@ const props = defineProps({
   levelRange: Number,
   edgeColorMode: String,
   edgeColorChannels: Object,
+  hideOverlap: Boolean,
 });
 
 const panzoomContainer = ref(null);
@@ -249,47 +250,64 @@ function applyColorEdgeDetection() {
   let rgbaPlanes = new cv.MatVector();
   cv.split(originalImage, rgbaPlanes);
 
-  let mergedPlanes = new cv.MatVector();
+  let processedPlanes = new cv.MatVector();
   const channelOrder = ['r', 'g', 'b'];
+  let activeChannels = [];
 
   for (let i = 0; i < 3; i++) {
     const channelKey = channelOrder[i];
     let singleChannel = rgbaPlanes.get(i);
+    let processedChannel;
 
     if (props.edgeColorChannels[channelKey]) {
+      activeChannels.push(i);
       let dst = new cv.Mat();
       cv.Laplacian(singleChannel, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
       let absDst = new cv.Mat();
       cv.convertScaleAbs(dst, absDst);
-      let binaryDst = new cv.Mat();
-      cv.threshold(absDst, binaryDst, 0, 255, cv.THRESH_BINARY);
-      mergedPlanes.push_back(binaryDst);
+      processedChannel = new cv.Mat();
+      cv.threshold(absDst, processedChannel, 0, 255, cv.THRESH_BINARY);
       dst.delete();
       absDst.delete();
     } else {
-      // If channel is disabled, add a black channel of the same size
-      let blackChannel = cv.Mat.zeros(originalImage.rows, originalImage.cols, cv.CV_8U);
-      mergedPlanes.push_back(blackChannel);
+      processedChannel = cv.Mat.zeros(originalImage.rows, originalImage.cols, cv.CV_8U);
     }
+    processedPlanes.push_back(processedChannel);
     singleChannel.delete();
   }
 
+  if (props.hideOverlap && activeChannels.length > 1) {
+      let overlap = new cv.Mat();
+      let firstChannel = processedPlanes.get(activeChannels[0]).clone();
+      cv.bitwise_and(firstChannel, processedPlanes.get(activeChannels[1]), overlap);
+      if (activeChannels.length === 3) {
+          cv.bitwise_and(overlap, processedPlanes.get(activeChannels[2]), overlap);
+      }
+
+      for (const i of activeChannels) {
+          let currentPlane = processedPlanes.get(i);
+          cv.bitwise_xor(currentPlane, overlap, currentPlane);
+      }
+      overlap.delete();
+      firstChannel.delete();
+  }
+
   // Keep original alpha channel
-  mergedPlanes.push_back(rgbaPlanes.get(3));
+  processedPlanes.push_back(rgbaPlanes.get(3));
 
   const result = new cv.Mat();
-  cv.merge(mergedPlanes, result);
+  cv.merge(processedPlanes, result);
   cv.imshow(imageCanvas.value, result);
 
   rgbaPlanes.delete();
-  mergedPlanes.delete();
+  processedPlanes.delete();
   result.delete();
 }
 
 
 // --- Watchers ---
 watch(() => props.imageSrc, loadImage);
-watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels], () => {
+watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels, props.hideOverlap], () => {
     applyProcessing();
     requestAnimationFrame(drawDisclaimer);
 }, { deep: true });

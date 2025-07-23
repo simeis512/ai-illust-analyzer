@@ -58,6 +58,18 @@
               <span class="channel-letter">{{ channel.toUpperCase() }}</span>
             </label>
           </div>
+          <div class="overlap-toggle-wrapper">
+            <div v-if="overlapTarget" :class="['overlap-toggle-container', { 'disabled': edgeColorMode === 'mono' }]">
+              <label :class="['overlap-toggle', `overlap-${overlapTarget.key.toLowerCase()}`, { 'toggled-on': !hideOverlap }]">
+                  <input type="checkbox" 
+                        :checked="!hideOverlap" 
+                        @change="emit('update:hideOverlap', !$event.target.checked)" 
+                        :disabled="edgeColorMode === 'mono'"
+                        class="hidden">
+                  <span class="overlap-letter">{{ overlapTarget.key }}</span>
+              </label>
+            </div>
+          </div>
           <button 
             @click="emit('update:edgeColorMode', 'color')" 
             :class="['mode-button', { 'active': edgeColorMode === 'color' }]">
@@ -89,8 +101,18 @@ const props = defineProps({
   levelRange: Number,
   edgeColorMode: String,
   edgeColorChannels: Object,
+  hideOverlap: Boolean,
 });
-const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels']);
+const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels', 'update:hideOverlap']);
+
+const overlapTarget = computed(() => {
+  const { r, g, b } = props.edgeColorChannels;
+  if (r && g && b) return { key: 'W', channels: ['r', 'g', 'b'] };
+  if (r && g) return { key: 'Y', channels: ['r', 'g'] };
+  if (g && b) return { key: 'C', channels: ['g', 'b'] };
+  if (r && b) return { key: 'M', channels: ['r', 'b'] };
+  return null;
+});
 
 function toggleChannel(channel) {
   if (props.edgeColorMode === 'mono') return;

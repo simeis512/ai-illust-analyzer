@@ -108,3 +108,43 @@
   @apply relative text-sm leading-none;
   z-index: 1;
 }
+
+/* --- Overlap Toggle Styles --- */
+.overlap-toggle-wrapper {
+    @apply w-9 h-7; /* Same size as the toggle button to reserve space */
+}
+
+.overlap-toggle-container.disabled {
+    @apply opacity-50;
+}
+
+.overlap-toggle {
+  @apply relative flex items-center justify-center w-7 h-7 transition-all ease-in-out bg-gray-300 text-gray-800 font-bold;
+}
+
+.overlap-toggle-container:not(.disabled) .overlap-toggle {
+    @apply cursor-pointer;
+}
+
+.overlap-toggle.toggled-on {
+  @apply bg-gray-600 text-white;
+}
+
+.overlap-letter {
+  @apply relative text-sm leading-none;
+  z-index: 1;
+}
+
+.overlap-toggle.toggled-on.overlap-w {
+  @apply bg-white text-black;
+  border: 1px solid black;
+}
+.overlap-toggle.toggled-on.overlap-y {
+  @apply bg-yellow-300 text-black;
+}
+.overlap-toggle.toggled-on.overlap-c {
+  @apply bg-cyan-400 text-black;
+}
+.overlap-toggle.toggled-on.overlap-m {
+  @apply bg-pink-500 text-white;
+}
