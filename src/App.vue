@@ -18,6 +18,7 @@
         :edge-color-mode="state.edgeColorMode"
         :edge-color-channels="state.edgeColorChannels"
         :hide-overlap="state.hideOverlap"
+        :mosaic="state.mosaic"
       />
     </main>
 
@@ -28,11 +29,13 @@
       :edge-color-mode="state.edgeColorMode"
       :edge-color-channels="state.edgeColorChannels"
       :hide-overlap="state.hideOverlap"
+      :mosaic="state.mosaic"
       @update:level-center="state.levelCenter = $event"
       @update:level-range="state.levelRange = $event"
       @update:edge-color-mode="state.edgeColorMode = $event"
       @update:edge-color-channels="state.edgeColorChannels = $event"
       @update:hide-overlap="state.hideOverlap = $event"
+      @update:mosaic="state.mosaic = $event"
     />
   </div>
 </template>
@@ -54,6 +57,7 @@ const state = reactive({
   edgeColorMode: 'color', // 'mono' or 'color'
   edgeColorChannels: { r: true, g: true, b: true },
   hideOverlap: false,
+  mosaic: false,
 });
 
 function setMode(newMode) {

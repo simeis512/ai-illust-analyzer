@@ -45,7 +45,7 @@
 
       <!-- Edge Detection Controls -->
       <div v-else-if="mode === 'edge'" class="edge-controls-container">
-        <!-- Left side of the center divide -->
+        <!-- Left Column (Right Aligned) -->
         <div class="flex justify-end items-center space-x-2">
           <div :class="['channel-toggles', { 'disabled': edgeColorMode === 'mono' }]">
             <label v-for="(enabled, channel) in edgeColorChannels" :key="channel" 
@@ -76,13 +76,40 @@
             カラー
           </button>
         </div>
-        <!-- Right side of the center divide -->
-        <div class="flex justify-start items-center">
-          <button 
-            @click="emit('update:edgeColorMode', 'mono')" 
-            :class="['mode-button', { 'active': edgeColorMode === 'mono' }]">
-            モノクロ
-          </button>
+
+        <!-- Right Column (Space Between) -->
+        <div class="flex justify-between items-center">
+            <button 
+                @click="emit('update:edgeColorMode', 'mono')" 
+                :class="['mode-button', { 'active': edgeColorMode === 'mono' }]">
+                モノクロ
+            </button>
+            <div class="mosaic-toggle-wrapper">
+                <label :class="['mosaic-toggle', { 'toggled-on': mosaic }]">
+                <input type="checkbox" 
+                        :checked="mosaic" 
+                        @change="emit('update:mosaic', $event.target.checked)" 
+                        class="hidden">
+                <div class="mosaic-icon">
+                    <div class="mosaic-quadrant">
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                    </div>
+                    <div class="mosaic-quadrant">
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                    </div>
+                    <div class="mosaic-quadrant">
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                    </div>
+                    <div class="mosaic-quadrant">
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                    </div>
+                </div>
+                </label>
+            </div>
         </div>
       </div>
     </div>
@@ -102,8 +129,9 @@ const props = defineProps({
   edgeColorMode: String,
   edgeColorChannels: Object,
   hideOverlap: Boolean,
+  mosaic: Boolean,
 });
-const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels', 'update:hideOverlap']);
+const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels', 'update:hideOverlap', 'update:mosaic']);
 
 const overlapTarget = computed(() => {
   const { r, g, b } = props.edgeColorChannels;

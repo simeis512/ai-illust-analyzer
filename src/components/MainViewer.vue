@@ -22,6 +22,7 @@ const props = defineProps({
   edgeColorMode: String,
   edgeColorChannels: Object,
   hideOverlap: Boolean,
+  mosaic: Boolean,
 });
 
 const panzoomContainer = ref(null);
@@ -218,11 +219,23 @@ function applyLevelCorrection() {
 }
 
 function applyEdgeDetection() {
+  let edgeDetectedImage;
+
   if (props.edgeColorMode === 'mono') {
-    applyMonoEdgeDetection();
+    edgeDetectedImage = applyMonoEdgeDetection();
   } else {
-    applyColorEdgeDetection();
+    edgeDetectedImage = applyColorEdgeDetection();
   }
+
+  if (props.mosaic) {
+    const mosaicImage = applyMosaic(edgeDetectedImage, 4);
+    cv.imshow(imageCanvas.value, mosaicImage);
+    mosaicImage.delete();
+  } else {
+    cv.imshow(imageCanvas.value, edgeDetectedImage);
+  }
+
+  edgeDetectedImage.delete();
 }
 
 function applyMonoEdgeDetection() {
@@ -238,12 +251,16 @@ function applyMonoEdgeDetection() {
   const binaryDst = new cv.Mat();
   cv.threshold(absDst, binaryDst, 0, 255, cv.THRESH_BINARY);
   
-  cv.imshow(imageCanvas.value, binaryDst);
+  // Convert grayscale back to RGBA for consistent handling
+  const rgbaDst = new cv.Mat();
+  cv.cvtColor(binaryDst, rgbaDst, cv.COLOR_GRAY2RGBA);
 
   srcGray.delete();
   dst.delete();
   absDst.delete();
   binaryDst.delete();
+
+  return rgbaDst;
 }
 
 function applyColorEdgeDetection() {
@@ -297,17 +314,38 @@ function applyColorEdgeDetection() {
 
   const result = new cv.Mat();
   cv.merge(processedPlanes, result);
-  cv.imshow(imageCanvas.value, result);
 
   rgbaPlanes.delete();
   processedPlanes.delete();
-  result.delete();
+
+  return result;
+}
+
+function applyMosaic(src, blockSize) {
+  const dst = src.clone();
+  const cols = src.cols;
+  const rows = src.rows;
+
+  for (let y = 0; y < rows; y += blockSize) {
+    for (let x = 0; x < cols; x += blockSize) {
+      const rect = new cv.Rect(x, y, Math.min(blockSize, cols - x), Math.min(blockSize, rows - y));
+      const roi = src.roi(rect);
+      const meanColor = cv.mean(roi);
+      const destRoi = dst.roi(rect);
+      const scalar = new cv.Scalar(meanColor[0], meanColor[1], meanColor[2], meanColor[3]);
+      destRoi.setTo(scalar);
+
+      roi.delete();
+      destRoi.delete();
+    }
+  }
+  return dst;
 }
 
 
 // --- Watchers ---
 watch(() => props.imageSrc, loadImage);
-watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels, props.hideOverlap], () => {
+watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels, props.hideOverlap, props.mosaic], () => {
     applyProcessing();
     requestAnimationFrame(drawDisclaimer);
 }, { deep: true });

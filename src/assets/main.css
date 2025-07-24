@@ -55,7 +55,7 @@
 
 /* --- Edge Detection Controls --- */
 .edge-controls-container {
-  @apply grid grid-cols-2 gap-4 w-full;
+  @apply grid grid-cols-2 gap-4 w-full items-center;
 }
 
 .mode-button {
@@ -147,4 +147,54 @@
 }
 .overlap-toggle.toggled-on.overlap-m {
   @apply bg-pink-500 text-white;
+}
+
+/* --- Mosaic Toggle Styles --- */
+.mosaic-toggle-wrapper {
+    @apply w-8 h-8 flex items-center justify-center; /* Fixed size for the button */
+}
+
+.mosaic-toggle {
+  @apply relative flex items-center justify-center w-full h-full transition-all ease-in-out bg-gray-500 cursor-pointer p-1;
+  border: 1px solid #4b5563;
+}
+
+.mosaic-toggle.toggled-on {
+  @apply bg-white;
+}
+
+.mosaic-icon {
+  @apply w-full h-full grid grid-cols-2 grid-rows-2;
+  border: 0.5px solid #ddd;
+}
+
+.mosaic-toggle.toggled-on .mosaic-icon {
+  border-color: #333;
+}
+
+.mosaic-quadrant {
+    @apply grid grid-cols-2 grid-rows-2;
+}
+
+.mosaic-dot {
+    border: 0.5px solid #ddd;
+    transition: all 0.2s ease-in-out;
+}
+
+.mosaic-toggle.toggled-on .mosaic-dot {
+    border-color: #333;
+}
+
+/* Transformation for the ON state */
+.mosaic-toggle.toggled-on .mosaic-quadrant .mosaic-dot:nth-child(1) {
+    transform: scale(2) translate(25%, 25%);
+}
+.mosaic-toggle.toggled-on .mosaic-quadrant .mosaic-dot:nth-child(2) {
+    transform: scale(2) translate(-25%, 25%);
+}
+.mosaic-toggle.toggled-on .mosaic-quadrant .mosaic-dot:nth-child(3) {
+    transform: scale(2) translate(25%, -25%);
+}
+.mosaic-toggle.toggled-on .mosaic-quadrant .mosaic-dot:nth-child(4) {
+    transform: scale(2) translate(-25%, -25%);
 }
