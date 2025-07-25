@@ -115,7 +115,7 @@
 }
 
 .overlap-toggle-container.disabled {
-    @apply opacity-50;
+    @apply opacity-50 cursor-not-allowed;
 }
 
 .overlap-toggle {
@@ -151,7 +151,7 @@
 
 /* --- Mosaic Toggle Styles --- */
 .mosaic-toggle-wrapper {
-    @apply w-8 h-8 flex items-center justify-center; /* Fixed size for the button */
+    @apply w-8 h-13 flex items-center justify-center; /* Fixed size for the button */
 }
 
 .mosaic-toggle {
@@ -197,4 +197,36 @@
 }
 .mosaic-toggle.toggled-on .mosaic-quadrant .mosaic-dot:nth-child(4) {
     transform: scale(2) translate(-25%, -25%);
+}
+
+/* --- Mosaic Size Slider --- */
+.mosaic-size-slider {
+    @apply h-1 bg-transparent;
+}
+
+.mosaic-size-slider.disabled {
+    @apply cursor-not-allowed opacity-50;
+}
+
+.mosaic-size-slider-track {
+    @apply absolute w-full h-1 bg-gray-400 rounded-lg top-1/2 pointer-events-none;
+}
+
+.mosaic-size-slider-track.disabled {
+    @apply opacity-50;
+}
+
+.mosaic-size-step {
+    @apply absolute w-2 h-2 bg-gray-400 rounded-full top-1/2 -translate-y-1/2;
+    transform-origin: center;
+}
+
+/* Bump sizes */
+.mosaic-size-step.step-0 { transform: scale(1.2); }
+.mosaic-size-step.step-1 { transform: scale(1.4); }
+.mosaic-size-step.step-2 { transform: scale(1.6); }
+.mosaic-size-step.step-3 { transform: scale(1.8); }
+
+.mosaic-size-slider::-webkit-slider-thumb {
+  @apply h-1.5 w-1.5 bg-white;
 }

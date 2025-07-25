@@ -4,8 +4,13 @@
     <canvas ref="imageCanvas" class="max-w-full max-h-full object-contain"></canvas>
     <!-- Canvas for disclaimer overlay (unaffected by Panzoom) -->
     <canvas ref="disclaimerCanvas" class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
-    <div v-if="!imageSrc" class="text-gray-400 absolute">
+    <div v-if="!imageSrc && !isLoading" class="text-gray-400 absolute">
       「画像選択」ボタンから画像ファイルを読み込んでください。
+    </div>
+    <!-- Progress Indicator -->
+    <div v-if="isLoading || isProcessing" class="absolute inset-0 bg-gray-900 bg-opacity-75 flex flex-col justify-center items-center z-50">
+      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+      <p class="text-white mt-4">{{ isLoading ? '画像を読み込んでいます...' : '画像を処理中です...' }}</p>
     </div>
   </div>
 </template>
@@ -23,6 +28,7 @@ const props = defineProps({
   edgeColorChannels: Object,
   hideOverlap: Boolean,
   mosaic: Boolean,
+  mosaicSize: Number,
 });
 
 const panzoomContainer = ref(null);
@@ -31,9 +37,13 @@ const disclaimerCanvas = ref(null);
 let originalImage = null;
 let panzoom = null;
 
+const isLoading = ref(false);
+const isProcessing = ref(false);
+
 // --- Disclaimer Drawing ---
 function drawDisclaimer() {
   const canvas = disclaimerCanvas.value;
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
@@ -139,19 +149,37 @@ function drawDisclaimer() {
 // --- Image Loading and Initial Drawing ---
 function loadImage() {
   if (!props.imageSrc || !imageCanvas.value) return;
+
+  isLoading.value = true;
+  isProcessing.value = false; // Reset processing flag on new image
+
   const ctx = imageCanvas.value.getContext('2d');
   const img = new Image();
   img.crossOrigin = 'anonymous';
+
   img.onload = () => {
     imageCanvas.value.width = img.width;
     imageCanvas.value.height = img.height;
     ctx.drawImage(img, 0, 0);
+
+    // Clean up previous image mat to prevent memory leaks
+    if (originalImage && !originalImage.isDeleted()) {
+        originalImage.delete();
+    }
     originalImage = cv.imread(imageCanvas.value);
+    
+    isLoading.value = false;
+    
     applyProcessing();
     panzoom?.reset();
-    
-    requestAnimationFrame(drawDisclaimer);
   };
+
+  img.onerror = () => {
+    isLoading.value = false;
+    console.error("Image loading failed.");
+    // Optionally, display an error message to the user in the UI
+  };
+
   img.src = props.imageSrc;
 }
 
@@ -159,24 +187,45 @@ function loadImage() {
 function applyProcessing() {
   if (!originalImage) return;
 
-  switch (props.mode) {
-    case 'contrast':
-      applyLevelCorrection();
-      break;
-    case 'edge':
-      applyEdgeDetection();
-      break;
-    default:
-      showOriginal();
-      break;
+  if (props.mode === 'edge') {
+    isProcessing.value = true;
   }
+
+  // Use setTimeout to allow the UI to update. Set processing flag only for heavy tasks.
+  setTimeout(() => {
+    try {
+      switch (props.mode) {
+        case 'contrast':
+          applyLevelCorrection();
+          break;
+        case 'edge':
+          applyEdgeDetection();
+          break;
+        default:
+          showOriginal();
+          break;
+      }
+    } catch (e) {
+      console.error("An error occurred during image processing:", e);
+      showOriginal(); // Fallback to original image on error
+    } finally {
+      // Reset processing flag if it was set
+      if (isProcessing.value) {
+        isProcessing.value = false;
+      }
+      // Redraw disclaimer after processing is complete
+      requestAnimationFrame(drawDisclaimer);
+    }
+  }, 10); // A small delay to ensure the loading indicator is rendered
 }
 
 function showOriginal() {
+  if (!originalImage || originalImage.isDeleted()) return;
   cv.imshow(imageCanvas.value, originalImage);
 }
 
 function applyLevelCorrection() {
+  if (!originalImage || originalImage.isDeleted()) return;
   const lut = new cv.Mat(1, 256, cv.CV_8U);
   
   const invertedLevelCenter = 255 - props.levelCenter;
@@ -219,6 +268,7 @@ function applyLevelCorrection() {
 }
 
 function applyEdgeDetection() {
+  if (!originalImage || originalImage.isDeleted()) return;
   let edgeDetectedImage;
 
   if (props.edgeColorMode === 'mono') {
@@ -228,7 +278,7 @@ function applyEdgeDetection() {
   }
 
   if (props.mosaic) {
-    const mosaicImage = applyMosaic(edgeDetectedImage, 4);
+    const mosaicImage = applyMosaic(edgeDetectedImage, props.mosaicSize);
     cv.imshow(imageCanvas.value, mosaicImage);
     mosaicImage.delete();
   } else {
@@ -239,6 +289,7 @@ function applyEdgeDetection() {
 }
 
 function applyMonoEdgeDetection() {
+  if (!originalImage || originalImage.isDeleted()) return new cv.Mat();
   const srcGray = new cv.Mat();
   cv.cvtColor(originalImage, srcGray, cv.COLOR_RGBA2GRAY, 0);
 
@@ -264,6 +315,7 @@ function applyMonoEdgeDetection() {
 }
 
 function applyColorEdgeDetection() {
+  if (!originalImage || originalImage.isDeleted()) return new cv.Mat();
   let rgbaPlanes = new cv.MatVector();
   cv.split(originalImage, rgbaPlanes);
 
@@ -326,16 +378,84 @@ function applyMosaic(src, blockSize) {
   const cols = src.cols;
   const rows = src.rows;
 
+  const colorMap = {
+    '0,0,0': 'K',
+    '255,0,0': 'R',
+    '0,255,0': 'G',
+    '0,0,255': 'B',
+    '255,255,0': 'Y',
+    '0,255,255': 'C',
+    '255,0,255': 'M',
+    '255,255,255': 'W'
+  };
+
+  const colorToComponent = {
+      'R': 0b100,
+      'G': 0b010,
+      'B': 0b001,
+      'Y': 0b110,
+      'C': 0b011,
+      'M': 0b101,
+      'W': 0b111,
+      'K': 0b000,
+  };
+
   for (let y = 0; y < rows; y += blockSize) {
     for (let x = 0; x < cols; x += blockSize) {
       const rect = new cv.Rect(x, y, Math.min(blockSize, cols - x), Math.min(blockSize, rows - y));
-      const roi = src.roi(rect);
-      const meanColor = cv.mean(roi);
+      
+      const histogram = { K: 0, R: 0, G: 0, B: 0, Y: 0, C: 0, M: 0, W: 0 };
+      
+      for (let j = 0; j < rect.height; j++) {
+        for (let i = 0; i < rect.width; i++) {
+          // ブロックの左上座標(x, y)とループ変数(i, j)から絶対座標を計算
+          const absoluteX = x + i;
+          const absoluteY = y + j;
+          
+          // 元画像のデータから直接インデックスを計算して値を取得
+          const index = (absoluteY * src.cols * 4) + (absoluteX * 4);
+          const r = src.data[index];
+          const g = src.data[index + 1];
+          const b = src.data[index + 2];
+
+          const key = `${r},${g},${b}`;
+          if (colorMap[key]) {
+            histogram[colorMap[key]]++;
+          }
+        }
+      }
+      histogram.K /= 8;
+
+      let maxCount = 0;
+      for (const color in histogram) {
+        if (histogram[color] > maxCount) {
+          maxCount = histogram[color];
+        }
+      }
+
+      let dominantColors = [];
+      for (const color in histogram) {
+        if (histogram[color] === maxCount) {
+          dominantColors.push(color);
+        }
+      }
+      
+      let finalColorComponent = 0b000;
+      if (dominantColors.length > 0) {
+          finalColorComponent = dominantColors.reduce((acc, color) => {
+              return acc | colorToComponent[color];
+          }, 0b000);
+      }
+
+      let finalColor = [0, 0, 0];
+      if ((finalColorComponent & 0b100) !== 0) finalColor[0] = 255;
+      if ((finalColorComponent & 0b010) !== 0) finalColor[1] = 255;
+      if ((finalColorComponent & 0b001) !== 0) finalColor[2] = 255;
+
       const destRoi = dst.roi(rect);
-      const scalar = new cv.Scalar(meanColor[0], meanColor[1], meanColor[2], meanColor[3]);
+      const scalar = new cv.Scalar(finalColor[0], finalColor[1], finalColor[2], 255);
       destRoi.setTo(scalar);
 
-      roi.delete();
       destRoi.delete();
     }
   }
@@ -345,9 +465,8 @@ function applyMosaic(src, blockSize) {
 
 // --- Watchers ---
 watch(() => props.imageSrc, loadImage);
-watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels, props.hideOverlap, props.mosaic], () => {
+watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels, props.hideOverlap, props.mosaic, props.mosaicSize], () => {
     applyProcessing();
-    requestAnimationFrame(drawDisclaimer);
 }, { deep: true });
 
 

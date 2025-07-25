@@ -84,31 +84,54 @@
                 :class="['mode-button', { 'active': edgeColorMode === 'mono' }]">
                 モノクロ
             </button>
-            <div class="mosaic-toggle-wrapper">
-                <label :class="['mosaic-toggle', { 'toggled-on': mosaic }]">
-                <input type="checkbox" 
-                        :checked="mosaic" 
-                        @change="emit('update:mosaic', $event.target.checked)" 
-                        class="hidden">
-                <div class="mosaic-icon">
-                    <div class="mosaic-quadrant">
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                    </div>
-                    <div class="mosaic-quadrant">
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                    </div>
-                    <div class="mosaic-quadrant">
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                    </div>
-                    <div class="mosaic-quadrant">
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                        <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
-                    </div>
-                </div>
-                </label>
+            <div class="flex flex-col items-center w-12 h-14 -mt-2">
+              <div class="slider-container mt-1 mb-3">
+                  <div class="relative flex-grow w-12 h-full flex items-center">
+                      <div :class="['mosaic-size-slider-track', { 'disabled': !mosaic }]">
+                          <div v-for="(step, index) in mosaicSizeSteps" :key="index"
+                              :class="['mosaic-size-step', `step-${index}`]"
+                              :style="{ left: `${(index / (mosaicSizeSteps.length)) * 116 - 2}%` }">
+                          </div>
+                      </div>
+                      <input
+                          type="range"
+                          id="mosaicSize"
+                          :value="mosaicSizeIndex"
+                          @input="emit('update:mosaicSize', mosaicSizeSteps[parseInt($event.target.value)])"
+                          :disabled="!mosaic"
+                          min="0"
+                          :max="mosaicSizeSteps.length - 1"
+                          step="1"
+                          :class="['w-full custom-slider mosaic-size-slider', { 'disabled': !mosaic }]"
+                      />
+                  </div>
+              </div>
+              <div class="mosaic-toggle-wrapper">
+                  <label :class="['mosaic-toggle', { 'toggled-on': mosaic }]">
+                  <input type="checkbox" 
+                          :checked="mosaic" 
+                          @change="emit('update:mosaic', $event.target.checked)" 
+                          class="hidden">
+                  <div class="mosaic-icon">
+                      <div class="mosaic-quadrant">
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                      </div>
+                      <div class="mosaic-quadrant">
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                      </div>
+                      <div class="mosaic-quadrant">
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                      </div>
+                      <div class="mosaic-quadrant">
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                          <div class="mosaic-dot"></div><div class="mosaic-dot"></div>
+                      </div>
+                  </div>
+                  </label>
+              </div>
             </div>
         </div>
       </div>
@@ -130,8 +153,15 @@ const props = defineProps({
   edgeColorChannels: Object,
   hideOverlap: Boolean,
   mosaic: Boolean,
+  mosaicSize: Number,
 });
-const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels', 'update:hideOverlap', 'update:mosaic']);
+const emit = defineEmits(['update:levelCenter', 'update:levelRange', 'update:edgeColorMode', 'update:edgeColorChannels', 'update:hideOverlap', 'update:mosaic', 'update:mosaicSize']);
+
+const mosaicSizeSteps = [2, 4, 8, 16];
+const mosaicSizeIndex = computed(() => {
+    const index = mosaicSizeSteps.indexOf(props.mosaicSize);
+    return index === -1 ? 1 : index; // Default to 4 (index 1)
+});
 
 const overlapTarget = computed(() => {
   const { r, g, b } = props.edgeColorChannels;
