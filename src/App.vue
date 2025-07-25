@@ -61,7 +61,7 @@ const state = reactive({
   edgeColorChannels: { r: true, g: true, b: true },
   hideOverlap: false,
   mosaic: false,
-  mosaicSize: 1,
+  mosaicSize: 4,
 });
 
 function setMode(newMode) {
