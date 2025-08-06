@@ -1,22 +1,55 @@
 <template>
-  <div class="relative w-full h-full overflow-hidden bg-gray-800 flex justify-center items-center" ref="panzoomContainer">
-    <!-- Canvas for image display (affected by Panzoom) -->
-    <canvas ref="imageCanvas" class="max-w-full max-h-full object-contain"></canvas>
-    <!-- Canvas for disclaimer overlay (unaffected by Panzoom) -->
+  <div ref="rootContainer" class="relative w-full h-full bg-gray-800">
+    <div class="absolute inset-0 flex" :class="{ 'flex-row': isSplitView, 'flex-col': !isSplitView }">
+      <!-- Left/Single Viewer -->
+      <div ref="originalViewer" class="relative overflow-hidden flex-1 justify-center items-center flex">
+        <canvas ref="originalCanvas" class="max-w-full max-h-full object-contain"></canvas>
+        <div v-if="isSplitView" class="absolute top-2 right-2 bg-gray-800 bg-opacity-50 text-white px-2 py-1 rounded">
+          処理前
+        </div>
+      </div>
+
+      <!-- Right Viewer (only in split view) -->
+      <div v-if="isSplitView" ref="processedViewer" class="relative overflow-hidden flex-1 justify-center items-center flex border-l-2 border-gray-600">
+        <canvas ref="processedCanvas" class="max-w-full max-h-full object-contain"></canvas>
+        <div class="absolute top-2 left-2 bg-gray-800 bg-opacity-50 text-white px-2 py-1 rounded">
+          処理後
+        </div>
+      </div>
+    </div>
+
+    <!-- Disclaimer Canvas -->
     <canvas ref="disclaimerCanvas" class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
-    <div v-if="!imageSrc && !isLoading" class="text-gray-400 absolute">
+
+    <!-- Initial Text -->
+    <div v-if="!imageSrc && !isLoading" class="absolute inset-0 flex justify-center items-center text-gray-400">
       「画像選択」ボタンから画像ファイルを読み込んでください。
     </div>
+
     <!-- Progress Indicator -->
     <div v-if="isLoading || isProcessing" class="absolute inset-0 bg-gray-900 bg-opacity-75 flex flex-col justify-center items-center z-50">
       <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
       <p class="text-white mt-4">{{ isLoading ? '画像を読み込んでいます...' : '画像を処理中です...' }}</p>
     </div>
+    
+    <!-- Split View Toggle Button -->
+    <button 
+      v-if="imageSrc" 
+      @click="toggleSplitView" 
+      class="absolute bottom-4 left-4 bg-gray-700 hover:bg-gray-600 opacity-60 hover:opacity-100 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105 cursor-pointer"
+      :class="{ 'bg-gray-500': isSplitView }"
+      aria-label="Toggle Split View"
+    >
+      <svg class="split-view-icon" :class="{ 'active': isSplitView }" width="24" height="24" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect class="left-rect" x="2" y="2" width="28" height="28" rx="2" />
+        <rect class="right-rect" x="19" y="2" width="13" height="28" rx="2" />
+      </svg>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import Panzoom from '@panzoom/panzoom';
 
 const props = defineProps({
@@ -31,14 +64,30 @@ const props = defineProps({
   mosaicSize: Number,
 });
 
-const panzoomContainer = ref(null);
-const imageCanvas = ref(null);
+const rootContainer = ref(null);
+const originalViewer = ref(null);
+const processedViewer = ref(null);
+const originalCanvas = ref(null);
+const processedCanvas = ref(null);
 const disclaimerCanvas = ref(null);
+
 let originalImage = null;
-let panzoom = null;
+let panzoomOriginal = null;
+let panzoomProcessed = null;
+let isSyncing = false; // Flag to prevent event loops
 
 const isLoading = ref(false);
 const isProcessing = ref(false);
+const isSplitView = ref(false);
+
+function toggleSplitView() {
+  isSplitView.value = !isSplitView.value;
+  nextTick(() => {
+    resetAllPanzooms();
+    applyProcessing(); // Re-apply processing to ensure the correct canvas is updated
+  });
+}
+
 
 // --- Disclaimer Drawing ---
 function drawDisclaimer() {
@@ -47,7 +96,10 @@ function drawDisclaimer() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const container = panzoomContainer.value;
+  const container = rootContainer.value; // Use the root container for sizing
+  if (!container) return;
+
+  // Ensure the disclaimer canvas has the same dimensions as the root container.
   if (container.clientWidth !== canvas.width || container.clientHeight !== canvas.height) {
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
@@ -148,30 +200,32 @@ function drawDisclaimer() {
 
 // --- Image Loading and Initial Drawing ---
 function loadImage() {
-  if (!props.imageSrc || !imageCanvas.value) return;
+  if (!props.imageSrc || !originalCanvas.value) return;
 
   isLoading.value = true;
-  isProcessing.value = false; // Reset processing flag on new image
+  isProcessing.value = false;
 
-  const ctx = imageCanvas.value.getContext('2d');
+  const canvases = [originalCanvas.value, processedCanvas.value].filter(Boolean);
   const img = new Image();
   img.crossOrigin = 'anonymous';
 
   img.onload = () => {
-    imageCanvas.value.width = img.width;
-    imageCanvas.value.height = img.height;
-    ctx.drawImage(img, 0, 0);
+    for (const canvas of canvases) {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+    }
 
-    // Clean up previous image mat to prevent memory leaks
     if (originalImage && !originalImage.isDeleted()) {
         originalImage.delete();
     }
-    originalImage = cv.imread(imageCanvas.value);
+    originalImage = cv.imread(originalCanvas.value);
     
     isLoading.value = false;
     
     applyProcessing();
-    panzoom?.reset();
+    resetAllPanzooms();
   };
 
   img.onerror = () => {
@@ -221,11 +275,21 @@ function applyProcessing() {
 
 function showOriginal() {
   if (!originalImage || originalImage.isDeleted()) return;
-  cv.imshow(imageCanvas.value, originalImage);
+  const targetCanvas = isSplitView.value ? processedCanvas.value : originalCanvas.value;
+  if (targetCanvas) {
+    cv.imshow(targetCanvas, originalImage);
+  }
+  // In split view, original canvas should always show the original
+  if (isSplitView.value) {
+      cv.imshow(originalCanvas.value, originalImage);
+  }
 }
 
 function applyLevelCorrection() {
   if (!originalImage || originalImage.isDeleted()) return;
+  const targetCanvas = isSplitView.value ? processedCanvas.value : originalCanvas.value;
+  if (!targetCanvas) return;
+
   const lut = new cv.Mat(1, 256, cv.CV_8U);
   
   const invertedLevelCenter = 255 - props.levelCenter;
@@ -261,14 +325,21 @@ function applyLevelCorrection() {
 
   const dst = new cv.Mat();
   cv.LUT(originalImage, lut, dst);
-  cv.imshow(imageCanvas.value, dst);
+  cv.imshow(targetCanvas, dst);
   
   lut.delete();
   dst.delete();
+  
+  if (isSplitView.value) {
+      cv.imshow(originalCanvas.value, originalImage);
+  }
 }
 
 function applyEdgeDetection() {
   if (!originalImage || originalImage.isDeleted()) return;
+  const targetCanvas = isSplitView.value ? processedCanvas.value : originalCanvas.value;
+  if (!targetCanvas) return;
+
   let edgeDetectedImage;
 
   if (props.edgeColorMode === 'mono') {
@@ -279,13 +350,17 @@ function applyEdgeDetection() {
 
   if (props.mosaic) {
     const mosaicImage = applyMosaic(edgeDetectedImage, props.mosaicSize);
-    cv.imshow(imageCanvas.value, mosaicImage);
+    cv.imshow(targetCanvas, mosaicImage);
     mosaicImage.delete();
   } else {
-    cv.imshow(imageCanvas.value, edgeDetectedImage);
+    cv.imshow(targetCanvas, edgeDetectedImage);
   }
 
   edgeDetectedImage.delete();
+  
+  if (isSplitView.value) {
+      cv.imshow(originalCanvas.value, originalImage);
+  }
 }
 
 function applyMonoEdgeDetection() {
@@ -468,19 +543,110 @@ watch(() => props.imageSrc, loadImage);
 watch(() => [props.mode, props.levelCenter, props.levelRange, props.edgeColorMode, props.edgeColorChannels, props.hideOverlap, props.mosaic, props.mosaicSize], () => {
     applyProcessing();
 }, { deep: true });
+watch(isSplitView, () => {
+    nextTick(() => {
+        initPanzooms();
+    });
+});
+
+// --- Panzoom Handling ---
+
+// Define handlers so they can be added and removed correctly.
+let handleOriginalEvent, handleProcessedEvent;
+// Store element references for reliable listener removal, as Vue refs can become null before cleanup.
+let originalCanvasEl = null;
+let processedCanvasEl = null;
+
+/**
+ * Syncs the transform (pan and zoom) from a source Panzoom instance to a target instance.
+ * @param {Panzoom} source The Panzoom instance that was directly manipulated.
+ * @param {Panzoom} target The Panzoom instance that needs to be synced.
+ */
+const syncPanzooms = (source, target) => {
+    // If there is no target, a sync is already in progress, or the source is invalid, do nothing.
+    if (!target || isSyncing || !source) return;
+    isSyncing = true;
+
+    const x = source.getPan().x;
+    const y = source.getPan().y;
+    const scale = source.getScale();
+
+    target.pan(x, y, { animate: false, force: true });
+    target.zoom(scale, { animate: false, force: true, noSetRange: true });
+
+    requestAnimationFrame(() => { isSyncing = false; });
+};
+
+/**
+ * Initializes the Panzoom instances. It destroys existing instances and re-creates them,
+ * attaching the necessary event listeners and storing element references for later cleanup.
+ */
+function initPanzooms() {
+    destroyPanzooms();
+
+    // 1. Create Panzoom instances and store element references.
+    if (originalViewer.value && originalCanvas.value) {
+        panzoomOriginal = Panzoom(originalCanvas.value, { maxScale: 100, minScale: 0.1 });
+        originalCanvasEl = originalCanvas.value; // Store ref for cleanup
+    }
+    if (isSplitView.value && processedViewer.value && processedCanvas.value) {
+        panzoomProcessed = Panzoom(processedCanvas.value, { maxScale: 100, minScale: 0.1 });
+        processedCanvasEl = processedCanvas.value; // Store ref for cleanup
+    }
+
+    // 2. Create and attach event handlers now that instances are guaranteed to exist.
+    if (panzoomOriginal) {
+        originalViewer.value.addEventListener('wheel', panzoomOriginal.zoomWithWheel);
+        handleOriginalEvent = () => syncPanzooms(panzoomOriginal, panzoomProcessed);
+        originalCanvasEl.addEventListener('panzoomchange', handleOriginalEvent);
+    }
+    if (panzoomProcessed) {
+        processedViewer.value.addEventListener('wheel', panzoomProcessed.zoomWithWheel);
+        handleProcessedEvent = () => syncPanzooms(panzoomProcessed, panzoomOriginal);
+        processedCanvasEl.addEventListener('panzoomchange', handleProcessedEvent);
+    }
+}
+
+/**
+ * Resets the pan and zoom to the initial state for all active Panzoom instances.
+ */
+function resetAllPanzooms() {
+    panzoomOriginal?.reset();
+    panzoomProcessed?.reset();
+    if (isSplitView.value && !panzoomProcessed) {
+        nextTick(initPanzooms);
+    }
+}
+
+/**
+ * Properly removes event listeners from stored element references and destroys
+ * Panzoom instances to prevent memory leaks.
+ */
+function destroyPanzooms() {
+    if (panzoomOriginal) {
+        // panzoom.destroy() removes its own listeners (e.g., wheel on the parent).
+        // We only need to manually remove the listeners we added ourselves.
+        if (originalCanvasEl && handleOriginalEvent) {
+            originalCanvasEl.removeEventListener('panzoomchange', handleOriginalEvent);
+        }
+        panzoomOriginal.destroy();
+        panzoomOriginal = null;
+        originalCanvasEl = null;
+    }
+    if (panzoomProcessed) {
+        if (processedCanvasEl && handleProcessedEvent) {
+            processedCanvasEl.removeEventListener('panzoomchange', handleProcessedEvent);
+        }
+        panzoomProcessed.destroy();
+        panzoomProcessed = null;
+        processedCanvasEl = null;
+    }
+}
 
 
 // --- Lifecycle Hooks ---
 onMounted(() => {
-  if (panzoomContainer.value && imageCanvas.value) {
-    panzoom = Panzoom(imageCanvas.value, {
-      maxScale: 100,
-      minScale: 1,
-      zoomSpeed: 1,
-      pinchSpeed: 3,
-    });
-    panzoomContainer.value.addEventListener('wheel', panzoom.zoomWithWheel);
-  }
+  initPanzooms();
 
   const checkCv = setInterval(() => {
     if (typeof cv !== 'undefined' && cv.Mat) {

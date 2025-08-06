@@ -230,3 +230,37 @@
 .mosaic-size-slider::-webkit-slider-thumb {
   @apply h-1.5 w-1.5 bg-white;
 }
+
+.split-view-icon {
+  overflow: visible; /* Ensure rects are visible even if their width is 0 */
+}
+
+.split-view-icon .left-rect,
+.split-view-icon .right-rect {
+  transition: all 0.2s ease-in-out;
+  stroke: white;
+  stroke-width: 2;
+}
+
+/* --- Default State (Single View) --- */
+.split-view-icon .left-rect {
+  fill: transparent;
+  width: 28; /* Full width */
+}
+
+.split-view-icon .right-rect {
+  fill: transparent;
+  width: 0; /* Hidden */
+  opacity: 0;
+  transform-origin: right;
+}
+
+/* --- Active State (Split View) --- */
+.split-view-icon.active .left-rect {
+  width: 13px; /* Half width */
+}
+
+.split-view-icon.active .right-rect {
+  width: 13px; /* Half width */
+  opacity: 1;
+}
