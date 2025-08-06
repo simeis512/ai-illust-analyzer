@@ -36,7 +36,7 @@
     <button 
       v-if="imageSrc" 
       @click="toggleSplitView" 
-      class="absolute bottom-4 left-4 bg-gray-700 hover:bg-gray-600 opacity-60 hover:opacity-100 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105 cursor-pointer"
+      class="absolute bottom-4 left-4 bg-gray-700 hover:bg-gray-600 opacity-60 hover:opacity-100 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105 z-100 cursor-pointer"
       :class="{ 'bg-gray-500': isSplitView }"
       aria-label="Toggle Split View"
     >
